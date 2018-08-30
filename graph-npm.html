@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+   <head>
+       <meta charset="utf-8">
+       <script src="js/jquery.min.js"></script>
+       <script src="js/papaparse.min.js"></script>
+       <script src="js/moment.js"></script>
+       <script src="js/bootstrap.min.js"></script>
+       <link rel="stylesheet" href="css/bootstrap.min.css">
+       <script type="text/javascript" src="js/echarts.js"></script>
+       <script>
+       var nodes = []
+       var edges = []
+       var size = {};
+       var names = {}
+       var ans = [];
+       var startSize = 1;
+       var json;
+       var graphName;
+       var graphType = 'none';
+       var type = [];
+       var numUser = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var numLogin = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var numLogout = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var numIP = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var numIPv6 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var numIPdual = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var numServer = {};
+       var numActivity = {};
+      $(document).ready(function(){
+          $("#loadCSV").click(function(){
+              Papa.parse('login-20170102-anon.csv',{
+                  delimiter: " ",
+                  header: false,
+                  download: true,
+                  skipEmptyLines: true,
+                  complete: function(results) {
+                    console.log("results:", results);
+                    for(var i=0;i<results.data.length;i++){
+                      if(results.data[i][1] != '-'){
+                        results.data[i][1] = moment(parseInt(results.data[i][1])).format("DD-MM-YYYY HH:mm:ss");
+                      }
+                      if(results.data[i][3] != '-'){
+                        results.data[i][3] = moment(parseInt(results.data[i][3])).format("DD-MM-YYYY HH:mm:ss");
+                      }
+                      if(results.data[i][18] != '-'){
+                        results.data[i][18] = moment(parseInt(results.data[i][18])).format("DD-MM-YYYY HH:mm:ss");
+                      }
+                      if(results.data[i][1] != '-' && results.data[i][3] != '-' && results.data[i][1] < results.data[i][3]){
+                        var dmp = parseInt(results.data[i][3].split(' ')[1].split(':')[0]);
+                        numUser[dmp]++;
+                        if(results.data[i][8] == 'login-page'){
+                          numLogin[dmp]++;
+                        }
+                        if(results.data[i][8] == 'logout-page'){
+                          numLogout[dmp]++;
+                        }
+                        if(results.data[i][5] != '-' && results.data[i][6] == '-'){
+                          numIP[dmp]++;
+                        }
+                        if(results.data[i][6] != '-' && results.data[i][5] == '-'){
+                          numIPv6[dmp]++;
+                        }
+                        if(results.data[i][5] != '-' && results.data[i][6] != '-'){
+                          numIPdual[dmp]++;
+                        }
+                      }else{
+                        var dmp = parseInt(results.data[i][1].split(' ')[1].split(':')[0]);
+                        numUser[dmp]++;
+                        if(results.data[i][8] == 'login-page'){
+                          numLogin[dmp]++;
+                        }
+                        if(results.data[i][8] == 'logout-page'){
+                          numLogout[dmp]++;
+                        }
+                        if(results.data[i][5] != '-' && results.data[i][6] == '-'){
+                          numIP[dmp]++;
+                        }
+                        if(results.data[i][6] != '-' && results.data[i][5] == '-'){
+                          numIPv6[dmp]++;
+                        }
+                        if(results.data[i][5] != '-' && results.data[i][6] != '-'){
+                          numIPdual[dmp]++;
+                        }
+                      }
+                      if (results.data[i][7] in numServer){
+                        numServer[results.data[i][7]]++;
+                      }else{
+                        numServer[results.data[i][7]] = 1;
+                      }
+                      if (results.data[i][8] in numActivity){
+                        numActivity[results.data[i][8]]++;
+                      }else{
+                        numActivity[results.data[i][8]] = 1;
+                      }
+                      // Object.keys(numServer).forEach(function(key) {
+                      //   // console.log(key);
+                      //   if (nodes[key].id == results.data[i]['ASN']) {
+                      //     nodes[key].size += 0.1;
+                      //     if(nodes[key].size>max){max = nodes[key].size;}
+                      //     // console.log('has test2');
+                      //   }
+                      // });
+
+                    }
+                    console.log(numServer);
+                    var resultServer = Object.keys(numServer).map(function(key) {
+                      return {'name':key, 'value':numServer[key]};
+                    });
+                    var serverName = Object.keys(numServer).map(function(key) {
+                      return key;
+                    });
+                    var resultActivity = Object.keys(numActivity).map(function(key) {
+                      return {'name':key, 'value':numActivity[key]};
+                    });
+                    var activityName = Object.keys(numActivity).map(function(key) {
+                      return key;
+                    });
+
+                    console.log(resultActivity,activityName);
+                    drawUser(numUser);
+                    drawIp(numIP,numIPv6,numIPdual);
+                    drawLogin(numLogin,numLogout);
+                    drawServer(resultServer,serverName);
+                    drawActivity(resultActivity,activityName);
+
+
+                      // genGraph(results);
+                  }
+              });
+          });
+
+        })
+        function genGraph(results){
+          var max = 0;
+          var numNode = 0;
+          for (var i = 0; i < results.data.length; i++) {
+            var color = '#'+ Math.floor(Math.random()*16777215).toString(16);
+            if( ans.indexOf(results.data[i]['ASN']) === -1 ){
+              numNode +=1;
+                var node = {
+                  'category': results.data[i]['Type'],
+                  'id': results.data[i]['ASN'],
+                  'x': Math.floor(Math.random() * (1000 - (-1000) + 1)) + (-1000),
+                  'y': Math.floor(Math.random() * (1000 - (-1000) + 1)) + (-1000),
+                  'attributes': {},
+                  'label': results.data[i]['ASN'],
+                  'color': color,
+                  'size': startSize
+                }
+                nodes.push(node);
+               // size[results.data[i]['ASN']] = startSize;
+               // names[results.data[i]['ASN']] = results.data[i]['Name'];
+               ans.push(results.data[i]['ASN']);
+               // console.log("not duplicate",results.data[i]);
+             }else{
+              //  if (Object.values(nodes).includes(results.data[i]['ASN']) > -1) {
+              //
+              //    console.log('has test1');
+              // }
+              Object.keys(nodes).forEach(function(key) {
+                // console.log(key);
+                if (nodes[key].id == results.data[i]['ASN']) {
+                  nodes[key].size += 0.1;
+                  if(nodes[key].size>max){max = nodes[key].size;}
+                  // console.log('has test2');
+                }
+              });
+               // size[results.data[i]['ASN']] += 1;
+             }
+             if( ans.indexOf(results.data[i]['ASN-source']) === -1 ){
+               numNode +=1;
+               // var nameDummy;
+               // Object.keys(results.data).forEach(function(key) {
+               //   // console.log(key);
+               //   if (results.data[key].ASN == results.data[i]['ASN-source']) {
+               //     console.log('Match',results.data[key].Name, results.data[i]['Name']);
+               //     nameDummy = results.data[key].Name;
+               //     return false;
+               //     // nodes[key].size += 0.1;
+               //     // if(nodes[key].size>max){max = nodes[key].size;}
+               //   }
+               // });
+                 var node = {
+                   'category': results.data[i]['Type'],
+                   'id': results.data[i]['ASN-source'],
+                   'x': Math.floor(Math.random() * (1000 - (-1000) + 1)) + (-1000),
+                   'y': Math.floor(Math.random() * (1000 - (-1000) + 1)) + (-1000),
+                   'attributes': {},
+                   'label': results.data[i]['ASN-source'],
+                   'color': color,
+                   'size': startSize
+                 }
+                 nodes.push(node);
+                ans.push(results.data[i]['ASN-source']);
+              }else{
+               Object.keys(nodes).forEach(function(key) {
+                 // console.log(key);
+                 if (nodes[key].id == results.data[i]['ASN-source']) {
+                   nodes[key].size += 0.1;
+                   if(nodes[key].size>max){max = nodes[key].size;}
+                 }
+               });
+              }
+            var edge = {
+              'sourceID': results.data[i]['ASN-source'],
+              'targetID':  results.data[i]['ASN'],
+              // 'attributes': {},
+              'size': results.data[i]['Bandwidth']*0.1
+            }
+            edges.push(edge);
+
+            if(type.indexOf(results.data[i]['Type']) === -1){
+              console.log(results.data[i]['Type']);
+              type.push(results.data[i]['Type']);
+            }
+          }
+          console.log('max size',max);
+          console.log('num node',numNode);
+          console.log('ans',ans);
+          var jsonData = {'nodes':nodes,'edges':edges};
+          var jsonString = JSON.stringify(jsonData);
+          json = jsonData;
+          draw();
+
+        }
+        function drawUser(numUser) {
+          var dom = document.getElementById("container-user");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          option = {
+            legend: {
+                data:['#USER']
+            },
+            tooltip: {
+                 trigger: 'axis',
+             },
+              xAxis: {
+                  type: 'category',
+                  data: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00']
+              },
+              yAxis: {
+                  type: 'value'
+              },
+              series: [
+                {
+                    name:'#USER',
+                    data: numUser,
+                    type: 'line'
+                }
+            ]
+          };
+          ;
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function drawLogin(numLogin,numLogout) {
+          var dom = document.getElementById("container-login");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          option = {
+            legend: {
+                data:['Login','Logout']
+            },
+            tooltip: {
+                 trigger: 'axis',
+             },
+              xAxis: {
+                  type: 'category',
+                  data: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00']
+              },
+              yAxis: {
+                  type: 'value'
+              },
+              series: [
+                {
+                    name:'Login',
+                    data: numLogin,
+                    type: 'line'
+                },
+                {
+                    name:'Logout',
+                    data: numLogout,
+                    type: 'line'
+                },
+            ]
+          };
+          ;
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function drawIp(numIP,numIPv6,numIPdual) {
+          var dom = document.getElementById("container-ip");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          option = {
+            legend: {
+                data:['IPv4','IPv6','Dual']
+            },
+            tooltip: {
+                 trigger: 'axis',
+             },
+              xAxis: {
+                  type: 'category',
+                  data: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00']
+              },
+              yAxis: {
+                  type: 'value'
+              },
+              series: [
+                {
+                    name:'IPv4',
+                    data: numIP,
+                    type: 'line'
+                },
+                {
+                    name:'IPv6',
+                    data: numIPv6,
+                    type: 'line'
+                },
+                {
+                    name:'Dual',
+                    data: numIPdual,
+                    type: 'line'
+                },
+            ]
+          };
+          ;
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function drawServer(resultServer,serverName) {
+          var dom = document.getElementById("container-server");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          option = {
+            // title : {
+            //     text: '某站点用户访问来源',
+            //     subtext: '纯属虚构',
+            //     x:'center'
+            // },
+            tooltip : {
+                trigger: 'item',
+                formatter: "{a} <br/>{b} : {c} ({d}%)"
+            },
+            // legend: {
+            //     orient: 'vertical',
+            //     left: 'left',
+            //     data: serverName
+            // },
+            series : [
+                {
+                    name: 'Server',
+                    type: 'pie',
+                    radius : '55%',
+                    // center: ['50%', '60%'],
+                    data:resultServer,
+                    itemStyle: {
+                        emphasis: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+          ;
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function drawActivity(resultActivity,activityName) {
+          var dom = document.getElementById("container-activity");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          option = {
+            // title : {
+            //     text: '某站点用户访问来源',
+            //     subtext: '纯属虚构',
+            //     x:'center'
+            // },
+            tooltip : {
+                trigger: 'item',
+                formatter: "{a} <br/>{b} : {c} ({d}%)"
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                data: activityName
+            },
+            series : [
+                {
+                    name: 'Activity',
+                    type: 'pie',
+                    radius : '55%',
+                    // center: ['50%', '60%'],
+                    data:resultActivity,
+                    itemStyle: {
+                        emphasis: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+          ;
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function draw() {
+          var dom = document.getElementById("container");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          myChart.setOption(option = {
+              title: {
+                  text: graphName
+              },
+              tooltip: {},
+              animationDurationUpdate: 1500,
+              animationEasingUpdate: 'quinticInOut',
+              series : [
+                  {
+                      type: 'graph',
+                      layout: graphType,
+                      legendHoverLink: true,
+                      progressiveThreshold: 700,
+                      draggable: true,
+                      force: {
+                          // initLayout: 'circular',
+                          edgeLength: 200,
+                          repulsion: 500,
+                          gravity: 0.000000000002,
+                          layoutAnimation: true,
+                      },
+                      data: json.nodes.map(function (node) {
+                          return {
+                              x: node.x,
+                              y: node.y,
+                              id: node.id,
+                              name: node.label,
+                              symbolSize: node.size,
+                              itemStyle: {
+                                  normal: {
+                                      color: node.color
+                                  }
+                              }
+                          };
+                      }),
+                      edges: json.edges.map(function (edge) {
+                          return {
+                              source: edge.sourceID,
+                              target: edge.targetID
+                          };
+                      }),
+                      label: {
+                          emphasis: {
+                              position: 'right',
+                              show: true
+                          }
+                      },
+                      roam: true,
+                      focusNodeAdjacency: true,
+                      lineStyle: {
+                          normal: {
+                              width: 0.5,
+                              // curveness: 0.3,
+                              opacity: 0.7
+                          }
+                          // json.edges.map(function (edge) {
+                          //   console.log(edge.size);
+                          //     return {width: edge.size};
+                          // }),
+                      }
+                  }
+              ]
+          }, true);
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function changeType() {
+            graphType = document.getElementById("graphType").value;
+            draw();
+        }
+        </script>
+   </head>
+   <body style="height: 100%; margin: 0;overflow:hidden;">
+    <button id="loadCSV" type="button">Load CSV!</button>
+    <!-- <select id="graphType" onchange="changeType()">
+      <option value="user" selected>USER
+      <option value="ip">IP
+      <option value="login">Login/Logout
+    </select> -->
+    <div class="row">
+      <div class="col-md-4">
+        <div id="container-user" style="height: 50vh;"></div>
+      </div>
+      <div class="col-md-4">
+        <div id="container-ip" style="height: 50vh;"></div>
+      </div>
+      <div class="col-md-4">
+        <div id="container-login" style="height: 50vh;"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-4">
+        <div id="container-server" style="height: 50vh;"></div>
+      </div>
+      <div class="col-md-4">
+        <!-- <div id="container-ip" style="height: 50vh;"></div> -->
+      </div>
+      <div class="col-md-4">
+        <div id="container-activity" style="height: 50vh;"></div>
+      </div>
+    </div>
+
+
+
+
+
+   </body>
+</html>
