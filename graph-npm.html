@@ -19,16 +19,23 @@
        var graphName;
        var graphType = 'none';
        var type = [];
+       var user = {};
        var numUser = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
        var numLogin = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
        var numLogout = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
        var numIP = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
        var numIPv6 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
        var numIPdual = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+       var sumIP = 0;
+       var sumIPv6 = 0;
+       var sumIPdual = 0;
+       var IPv4 = {};
+       var IPv6 = {};
+       var IPdual = {};
        var numServer = {};
        var numActivity = {};
       $(document).ready(function(){
-          $("#loadCSV").click(function(){
+          // $("#loadCSV").click(function(){
               Papa.parse('login-20170102-anon.csv',{
                   delimiter: " ",
                   header: false,
@@ -46,23 +53,86 @@
                       if(results.data[i][18] != '-'){
                         results.data[i][18] = moment(parseInt(results.data[i][18])).format("DD-MM-YYYY HH:mm:ss");
                       }
+                      if(results.data[i][2] in user){
+                        if(results.data[i][8] == 'TIMEOUT' || results.data[i][8] == 'logout-page'){
+                          // user.splice(user.indexOf(results.data[i][2]), 1);
+                          user[results.data[i][2]]--;
+                          var count =0;
+                          Object.keys(user).forEach(function(key) {
+                            if (user[key] > 0) {
+                              count++;
+                            }
+                          });
+                          var dmp = parseInt(results.data[i][3].split(' ')[1].split(':')[0]);
+                          numUser[dmp] = count;
+                        }else if(results.data[i][8] == 'login-page'){
+                          user[results.data[i][2]]++;
+                          var count =0;
+                          Object.keys(user).forEach(function(key) {
+                            if (user[key] > 0) {
+                              count++;
+                            }
+                          });
+                          var dmp = parseInt(results.data[i][1].split(' ')[1].split(':')[0]);
+                          numUser[dmp] = count;
+                        }
+                      }else{
+                        if(results.data[i][8] == 'TIMEOUT' || results.data[i][8] == 'logout-page'){
+                          // user.splice(user.indexOf(results.data[i][2]), 1);
+                          // user[results.data[i][2]]--;
+                        }else{
+                          user[results.data[i][2]] = 1;
+                          var count =0;
+                          Object.keys(user).forEach(function(key) {
+                            if (user[key] > 0) {
+                              count++;
+                            }
+                          });
+                          var dmp = parseInt(results.data[i][1].split(' ')[1].split(':')[0]);
+                          numUser[dmp] = count;
+                        }
+                        // user.push(results.data[i][2]);
+                      }
                       if(results.data[i][1] != '-' && results.data[i][3] != '-' && results.data[i][1] < results.data[i][3]){
+
+
                         var dmp = parseInt(results.data[i][3].split(' ')[1].split(':')[0]);
                         numUser[dmp]++;
                         if(results.data[i][8] == 'login-page'){
                           numLogin[dmp]++;
                         }
-                        if(results.data[i][8] == 'logout-page'){
+                        if(results.data[i][8] == 'logout-page' || results.data[i][8] == 'TIMEOUT'){
                           numLogout[dmp]++;
                         }
                         if(results.data[i][5] != '-' && results.data[i][6] == '-'){
                           numIP[dmp]++;
+
+                          if(results.data[i][5] in IPv4){
+                            IPv4[results.data[i][5]]++;
+                          }else{
+                            IPv4[results.data[i][5]] = 1;
+                            sumIP++;
+                          }
                         }
                         if(results.data[i][6] != '-' && results.data[i][5] == '-'){
                           numIPv6[dmp]++;
+                          // sumIPv6++;
+                          if(results.data[i][6] in IPv6){
+                            IPv6[results.data[i][6]]++;
+                          }else{
+                            IPv6[results.data[i][6]] = 1;
+                            sumIPv6++;
+                          }
                         }
                         if(results.data[i][5] != '-' && results.data[i][6] != '-'){
                           numIPdual[dmp]++;
+                          // sumIPdual++;
+                          if(results.data[i][6] in IPdual){
+                            IPdual[results.data[i][6]]++;
+                          }else{
+                            IPdual[results.data[i][6]] = 1;
+                            sumIPdual++;
+                          }
                         }
                       }else{
                         var dmp = parseInt(results.data[i][1].split(' ')[1].split(':')[0]);
@@ -70,17 +140,37 @@
                         if(results.data[i][8] == 'login-page'){
                           numLogin[dmp]++;
                         }
-                        if(results.data[i][8] == 'logout-page'){
+                        if(results.data[i][8] == 'logout-page' || results.data[i][8] == 'TIMEOUT' ){
                           numLogout[dmp]++;
                         }
                         if(results.data[i][5] != '-' && results.data[i][6] == '-'){
                           numIP[dmp]++;
+                          if(results.data[i][5] in IPv4){
+                            IPv4[results.data[i][5]]++;
+                          }else{
+                            IPv4[results.data[i][5]] = 1;
+                            sumIP++;
+                          }
                         }
                         if(results.data[i][6] != '-' && results.data[i][5] == '-'){
                           numIPv6[dmp]++;
+                          // sumIPv6++;
+                          if(results.data[i][6] in IPv6){
+                            IPv6[results.data[i][6]]++;
+                          }else{
+                            IPv6[results.data[i][6]] = 1;
+                            sumIPv6++;
+                          }
                         }
                         if(results.data[i][5] != '-' && results.data[i][6] != '-'){
                           numIPdual[dmp]++;
+                          // sumIPdual++;
+                          if(results.data[i][6] in IPdual){
+                            IPdual[results.data[i][6]]++;
+                          }else{
+                            IPdual[results.data[i][6]] = 1;
+                            sumIPdual++;
+                          }
                         }
                       }
                       if (results.data[i][7] in numServer){
@@ -93,17 +183,9 @@
                       }else{
                         numActivity[results.data[i][8]] = 1;
                       }
-                      // Object.keys(numServer).forEach(function(key) {
-                      //   // console.log(key);
-                      //   if (nodes[key].id == results.data[i]['ASN']) {
-                      //     nodes[key].size += 0.1;
-                      //     if(nodes[key].size>max){max = nodes[key].size;}
-                      //     // console.log('has test2');
-                      //   }
-                      // });
 
                     }
-                    console.log(numServer);
+                    console.log(numUser);
                     var resultServer = Object.keys(numServer).map(function(key) {
                       return {'name':key, 'value':numServer[key]};
                     });
@@ -116,10 +198,13 @@
                     var activityName = Object.keys(numActivity).map(function(key) {
                       return key;
                     });
+                    var resultIP = [{'name':'IPv4', 'value':sumIP},{'name':'IPv6', 'value':sumIPv6},{'name':'dualIP', 'value':sumIPdual}];
+                    var ipName = ['IPv4','IPv6','dualIP'];
 
                     console.log(resultActivity,activityName);
                     drawUser(numUser);
                     drawIp(numIP,numIPv6,numIPdual);
+                    drawIp2(resultIP,ipName);
                     drawLogin(numLogin,numLogout);
                     drawServer(resultServer,serverName);
                     drawActivity(resultActivity,activityName);
@@ -128,7 +213,7 @@
                       // genGraph(results);
                   }
               });
-          });
+          // });
 
         })
         function genGraph(results){
@@ -230,8 +315,12 @@
           var app = {};
           option = null;
           option = {
+            title : {
+                text: '#USER',
+                x:'left'
+            },
             legend: {
-                data:['#USER']
+                data:['#USER'],
             },
             tooltip: {
                  trigger: 'axis',
@@ -250,7 +339,8 @@
                     data: numUser,
                     type: 'line'
                 }
-            ]
+            ],
+            color: ['#afbab2','#00b7c6','#8499a5','#f9c9a3','#6d87a8','#00a0c4','#dbe06b','#076d54','#00335b','#f94f8e']
           };
           ;
           if (option && typeof option === "object") {
@@ -263,8 +353,12 @@
           var app = {};
           option = null;
           option = {
+            title : {
+                text: 'Login/Logout',
+                x:'left'
+            },
             legend: {
-                data:['Login','Logout']
+                data:['Login','Logout'],
             },
             tooltip: {
                  trigger: 'axis',
@@ -281,14 +375,17 @@
                 {
                     name:'Login',
                     data: numLogin,
-                    type: 'line'
+                    type: 'line',
+                    // color: '#afbab2'
                 },
                 {
                     name:'Logout',
                     data: numLogout,
-                    type: 'line'
+                    type: 'line',
+                    // color: '#00b7c6'
                 },
-            ]
+            ],
+            color: ['#afbab2','#00b7c6','#8499a5','#f9c9a3','#6d87a8','#00a0c4','#dbe06b','#076d54','#00335b','#f94f8e']
           };
           ;
           if (option && typeof option === "object") {
@@ -301,8 +398,12 @@
           var app = {};
           option = null;
           option = {
+            title : {
+                text: 'IP',
+                x:'left'
+            },
             legend: {
-                data:['IPv4','IPv6','Dual']
+                data:['IPv4','IPv6','Dual'],
             },
             tooltip: {
                  trigger: 'axis',
@@ -331,7 +432,8 @@
                     data: numIPdual,
                     type: 'line'
                 },
-            ]
+            ],
+            color: ['#afbab2','#00b7c6','#8499a5','#f9c9a3','#6d87a8','#00a0c4','#dbe06b','#076d54','#00335b','#f94f8e']
           };
           ;
           if (option && typeof option === "object") {
@@ -344,27 +446,72 @@
           var app = {};
           option = null;
           option = {
-            // title : {
-            //     text: '某站点用户访问来源',
-            //     subtext: '纯属虚构',
-            //     x:'center'
-            // },
+            title : {
+                text: 'Server',
+                x:'left'
+            },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                legend: {
+                    data: serverName
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    boundaryGap: [0, 0.01]
+                },
+                yAxis: {
+                    type: 'category',
+                    data: serverName
+                },
+                series: [{
+                        name: 'Server',
+                        type: 'bar',
+                        data: resultServer
+                }],
+                color: ['#afbab2']
+            };
+          ;
+          if (option && typeof option === "object") {
+              myChart.setOption(option, true);
+          }
+        }
+        function drawIp2(resultIP,ipName) {
+          console.log(resultIP,ipName);
+          var dom = document.getElementById("container-ip2");
+          var myChart = echarts.init(dom);
+          var app = {};
+          option = null;
+          option = {
+            title : {
+                text: 'IP',
+                x:'left'
+            },
             tooltip : {
                 trigger: 'item',
                 formatter: "{a} <br/>{b} : {c} ({d}%)"
             },
-            // legend: {
-            //     orient: 'vertical',
-            //     left: 'left',
-            //     data: serverName
-            // },
+            legend: {
+                orient: 'vertical',
+                left: 'right',
+                data: ipName
+            },
             series : [
                 {
-                    name: 'Server',
+                    name: 'IP',
                     type: 'pie',
                     radius : '55%',
                     // center: ['50%', '60%'],
-                    data:resultServer,
+                    data:resultIP,
                     itemStyle: {
                         emphasis: {
                             shadowBlur: 10,
@@ -373,7 +520,8 @@
                         }
                     }
                 }
-            ]
+            ],
+            color: ['#afbab2','#00b7c6','#8499a5','#f9c9a3','#6d87a8','#00a0c4','#dbe06b','#076d54','#00335b','#f94f8e']
         };
           ;
           if (option && typeof option === "object") {
@@ -386,18 +534,17 @@
           var app = {};
           option = null;
           option = {
-            // title : {
-            //     text: '某站点用户访问来源',
-            //     subtext: '纯属虚构',
-            //     x:'center'
-            // },
+            title : {
+                text: 'Activity',
+                x:'left'
+            },
             tooltip : {
                 trigger: 'item',
                 formatter: "{a} <br/>{b} : {c} ({d}%)"
             },
             legend: {
                 orient: 'vertical',
-                left: 'left',
+                left: 'right',
                 data: activityName
             },
             series : [
@@ -415,7 +562,8 @@
                         }
                     }
                 }
-            ]
+            ],
+            color: ['#afbab2','#00b7c6','#8499a5','#f9c9a3','#6d87a8','#00a0c4','#dbe06b','#076d54','#00335b','#f94f8e']
         };
           ;
           if (option && typeof option === "object") {
@@ -488,7 +636,8 @@
                           // }),
                       }
                   }
-              ]
+              ],
+              color: ['#afbab2','#00b7c6','#8499a5','#f9c9a3','#6d87a8','#00a0c4','#dbe06b','#076d54','#00335b','#f94f8e']
           }, true);
           if (option && typeof option === "object") {
               myChart.setOption(option, true);
@@ -501,7 +650,7 @@
         </script>
    </head>
    <body style="height: 100%; margin: 0;overflow:hidden;">
-    <button id="loadCSV" type="button">Load CSV!</button>
+    <!-- <button id="loadCSV" type="button">Load CSV!</button> -->
     <!-- <select id="graphType" onchange="changeType()">
       <option value="user" selected>USER
       <option value="ip">IP
@@ -520,10 +669,10 @@
     </div>
     <div class="row">
       <div class="col-md-4">
-        <div id="container-server" style="height: 50vh;"></div>
+        <div id="container-ip2" style="height: 50vh;"></div>
       </div>
       <div class="col-md-4">
-        <!-- <div id="container-ip" style="height: 50vh;"></div> -->
+        <div id="container-server" style="height: 50vh;"></div>
       </div>
       <div class="col-md-4">
         <div id="container-activity" style="height: 50vh;"></div>
