@@ -72,7 +72,7 @@ $(document).ready(function(){
                   }
                 });
                 dmp = parseInt(results.data[i][3].split(' ')[1].split(':')[0]);
-
+                numLogout[dmp]++;
 
               }else{
                 if(results.data[i][2] in user){
@@ -88,11 +88,11 @@ $(document).ready(function(){
                 });
                 dmp = parseInt(results.data[i][1].split(' ')[1].split(':')[0]);
                 // numUser[dmp] = count;
-                // numLogin[dmp]++;
+                numLogin[dmp]++;
 
               }
               numUser[dmp] = count;
-              numLogout[dmp]++;
+
               if(results.data[i][5] != '-' && results.data[i][6] == '-'){
                 numIP[dmp]++;
 
